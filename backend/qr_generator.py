@@ -148,7 +148,7 @@ def _apply_frame(pil_img: Image.Image, frame_style: str, qr_color: str) -> Image
         except OSError:
             font = ImageFont.load_default()
 
-        text = "SCAN ME"
+        text = "ESCANEAME"
         bbox = draw.textbbox((0, 0), text, font=font)
         text_w = bbox[2] - bbox[0]
 
