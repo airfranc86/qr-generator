@@ -190,14 +190,14 @@ export default function App() {
         {/* LEFT: Form */}
         <section className="lg:col-span-3 card-solid p-5 sm:p-8 animate-fade-in" aria-labelledby="form-title">
           <header className="flex items-center gap-3 mb-7">
-            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center text-white font-extrabold tracking-tight shadow-[0_8px_20px_-8px_rgba(37,99,235,0.6)]">
-              QR
+            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-[0_8px_20px_-8px_rgba(37,99,235,0.4)] ring-1 ring-slate-200 overflow-hidden">
+              <img src="/logo.svg" alt="Mi QR" className="w-9 h-9 object-contain" />
             </div>
             <div>
               <h1 id="form-title" className="text-lg font-bold text-slate-900 leading-tight">
-                Generador de QR
+                Mi QR
               </h1>
-              <p className="text-xs text-slate-500">FastAPI · React · Render</p>
+              <p className="text-xs text-slate-500">Generador de códigos QR personalizados</p>
             </div>
           </header>
 
