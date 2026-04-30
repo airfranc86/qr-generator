@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState } from "react";
 import LiveQrPreview from "./LiveQrPreview.jsx";
+import ModulePreview from "./ModulePreview.jsx";
 
 const MODULE_STYLES = [
   { id: "square", label: "Cuadrado" },
@@ -24,37 +25,6 @@ const TABS = [
   { id: "logo", label: "Logo" },
   { id: "color", label: "Color y Forma" },
 ];
-
-function ModulePreview({ style, color, bg }) {
-  const dot = (cx, cy) => {
-    if (style === "circle") return <circle cx={cx} cy={cy} r="2.2" fill={color} />;
-    if (style === "rounded") return <rect x={cx - 2} y={cy - 2} width="4" height="4" rx="1.5" fill={color} />;
-    if (style === "gapped") return <rect x={cx - 1.6} y={cy - 1.6} width="3.2" height="3.2" fill={color} />;
-    if (style === "vertical") return <rect x={cx - 1} y={cy - 2.2} width="2" height="4.4" rx="1" fill={color} />;
-    if (style === "horizontal") return <rect x={cx - 2.2} y={cy - 1} width="4.4" height="2" rx="1" fill={color} />;
-    return <rect x={cx - 2} y={cy - 2} width="4" height="4" fill={color} />;
-  };
-  const pattern = [
-    [1, 1, 1, 0, 1, 1, 1],
-    [1, 0, 1, 1, 0, 0, 1],
-    [1, 0, 1, 0, 1, 1, 0],
-    [0, 1, 0, 1, 0, 1, 1],
-    [1, 1, 1, 0, 1, 1, 1],
-    [0, 0, 1, 1, 0, 1, 0],
-    [1, 1, 0, 1, 1, 0, 1],
-  ];
-  const points = [];
-  pattern.forEach((row, y) =>
-    row.forEach((v, x) => {
-      if (v) points.push(<g key={`${x}-${y}`}>{dot(x * 6 + 6, y * 6 + 6)}</g>);
-    })
-  );
-  return (
-    <svg viewBox="0 0 54 54" className="w-full h-full rounded-md" style={{ background: bg }} aria-hidden="true">
-      {points}
-    </svg>
-  );
-}
 
 function FrameIcon({ frame }) {
   const stroke = "currentColor";
@@ -325,19 +295,27 @@ export default function App() {
                     <div role="tabpanel" id="tabpanel-color" aria-labelledby="tab-color" className="space-y-5 animate-fade-in">
                       <div>
                         <p className="text-[11px] font-bold tracking-[0.18em] text-slate-500 mb-2">FORMA DE MÓDULO</p>
-                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
+                        <div className="grid grid-cols-3 sm:grid-cols-6 gap-2.5">
                           {MODULE_STYLES.map((m) => (
-                            <button
-                              key={m.id}
-                              type="button"
-                              aria-pressed={moduleStyle === m.id}
-                              aria-label={m.label}
-                              onClick={() => setModuleStyle(m.id)}
-                              className="style-tile"
-                              title={m.label}
-                            >
-                              <ModulePreview style={m.id} color={qrColor} bg={bgColor} />
-                            </button>
+                            <div key={m.id} className="flex flex-col items-center gap-1.5">
+                              <button
+                                type="button"
+                                aria-pressed={moduleStyle === m.id}
+                                aria-label={m.label}
+                                onClick={() => setModuleStyle(m.id)}
+                                className="style-tile w-full"
+                                title={m.label}
+                              >
+                                <ModulePreview style={m.id} color={qrColor} bg={bgColor} />
+                              </button>
+                              <span
+                                className={`text-[10px] font-semibold leading-tight text-center transition-colors ${
+                                  moduleStyle === m.id ? "text-brand-700" : "text-slate-500"
+                                }`}
+                              >
+                                {m.label}
+                              </span>
+                            </div>
                           ))}
                         </div>
                       </div>
