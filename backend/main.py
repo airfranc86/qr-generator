@@ -6,6 +6,7 @@ from typing import Optional
 # Allow running from repo root: uvicorn backend.main:app
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+import httpx
 from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
@@ -41,6 +42,29 @@ app.add_middleware(
 _HEX_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
 _MAX_LOGO_BYTES = 2 * 1024 * 1024  # 2 MB
 
+# Cloudflare Turnstile (CAPTCHA gratuito, ilimitado)
+# Default: test secret que SIEMPRE pasa (1x...AA). Reemplazar via env en producción.
+_TURNSTILE_SECRET = os.getenv("TURNSTILE_SECRET_KEY", "1x0000000000000000000000000000000AA")
+_TURNSTILE_VERIFY_URL = "https://challenges.cloudflare.com/turnstile/v0/siteverify"
+_TURNSTILE_ENABLED = bool(_TURNSTILE_SECRET) and not os.getenv("TESTING")
+
+
+async def _verify_turnstile(token: Optional[str], remote_ip: str) -> bool:
+    """Verify CF Turnstile token against Cloudflare. Returns True if valid (or disabled)."""
+    if not _TURNSTILE_ENABLED:
+        return True
+    if not token:
+        return False
+    try:
+        async with httpx.AsyncClient(timeout=5.0) as client:
+            resp = await client.post(
+                _TURNSTILE_VERIFY_URL,
+                data={"secret": _TURNSTILE_SECRET, "response": token, "remoteip": remote_ip},
+            )
+            return bool(resp.json().get("success", False))
+    except Exception:
+        return False
+
 
 @app.get("/api/health")
 async def health():
@@ -66,6 +90,7 @@ async def generate_qr(
     frame_style: str = Form("none"),
     logo: Optional[UploadFile] = File(None),
     website: str = Form("", description="Honeypot — must remain empty"),
+    cf_turnstile_token: Optional[str] = Form(None),
 ):
     # ---------- ANTI-BOT CHECKS ----------
     # 1. Honeypot — bots filling all fields will trip this
@@ -76,6 +101,13 @@ async def generate_qr(
     ua = request.headers.get("user-agent", "").strip()
     if not ua:
         raise HTTPException(403, "Acceso restringido")
+
+    # 3. Cloudflare Turnstile CAPTCHA verification (skipped in tests)
+    if _TURNSTILE_ENABLED:
+        remote_ip = get_remote_address(request)
+        ok = await _verify_turnstile(cf_turnstile_token, remote_ip)
+        if not ok:
+            raise HTTPException(403, "Verificación de CAPTCHA fallida")
 
     # ---------- VALIDACIÓN DE INPUT ----------
     if not url.startswith(("http://", "https://")):

@@ -1,6 +1,11 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import LiveQrPreview from "./LiveQrPreview.jsx";
 import ModulePreview from "./ModulePreview.jsx";
+import Turnstile from "./Turnstile.jsx";
+
+// Cloudflare test site key (always passes). Replace via VITE_TURNSTILE_SITE_KEY env at build time.
+const TURNSTILE_SITE_KEY =
+  import.meta.env.VITE_TURNSTILE_SITE_KEY || "1x00000000000000000000AA";
 
 const MODULE_STYLES = [
   { id: "square", label: "Cuadrado" },
@@ -82,7 +87,11 @@ export default function App() {
   const [downloading, setDownloading] = useState(false);
   const [error, setError] = useState(null);
   const [dragOver, setDragOver] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState(null);
   const fileInputRef = useRef(null);
+
+  const handleCaptchaVerify = useCallback((token) => setCaptchaToken(token), []);
+  const handleCaptchaExpire = useCallback(() => setCaptchaToken(null), []);
 
   const urlId = useId();
 
@@ -132,6 +141,7 @@ export default function App() {
       form.append("bg_color", bgColor);
       form.append("frame_style", frameStyle);
       form.append("website", ""); // honeypot — must stay empty
+      if (captchaToken) form.append("cf_turnstile_token", captchaToken);
       if (logoFile) form.append("logo", logoFile);
 
       const res = await fetch("/generate", { method: "POST", body: form });
@@ -153,7 +163,7 @@ export default function App() {
     }
   };
 
-  const canDownload = !!url && !downloading;
+  const canDownload = !!url && !downloading && !!captchaToken;
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 sm:p-6 lg:p-10 gap-6">
@@ -349,6 +359,12 @@ export default function App() {
                 {error}
               </div>
             )}
+
+            <Turnstile
+              siteKey={TURNSTILE_SITE_KEY}
+              onVerify={handleCaptchaVerify}
+              onExpire={handleCaptchaExpire}
+            />
 
             <button
               type="button"

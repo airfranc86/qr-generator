@@ -10,3 +10,7 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.0"
+      # Cloudflare Turnstile secret key — set via Render dashboard (sync: false).
+      # Si se omite, usa la test key de Cloudflare (siempre pasa = no protege).
+      - key: TURNSTILE_SECRET_KEY
+        sync: false

@@ -77,9 +77,34 @@ Response: `image/png`
 ### `GET /api/options`
 ### `GET /docs` — Swagger UI
 
+## Sistema anti-bot
+
+Defensa en capas sobre `/generate`:
+
+1. **Rate limiting** — 30 req/min por IP (`slowapi`)
+2. **Honeypot** — campo invisible `website` que los bots ingenuos llenan
+3. **User-Agent check** — UA vacío → 403
+4. **Cloudflare Turnstile** — CAPTCHA invisible y gratuito (privacy-first, sin Google)
+5. **Límites de payload** — URL ≤2048 chars, logo ≤2 MB
+
+### Configurar Turnstile en producción (gratis, ilimitado)
+
+Por defecto se usan las **test keys** de Cloudflare que siempre pasan (útiles para dev). Para producción real:
+
+1. Crear cuenta gratis en https://dash.cloudflare.com
+2. Ir a Turnstile → Add site → Mode "Managed" o "Invisible"
+3. Copiar **Site Key** y **Secret Key**
+4. Configurar en Render:
+   - **Variable de entorno backend:** `TURNSTILE_SECRET_KEY=<tu-secret-key>`
+   - **Variable de build frontend:** `VITE_TURNSTILE_SITE_KEY=<tu-site-key>` (definir antes de `npm run build`)
+5. Rebuild frontend → commit `dist/` → push
+
+Las test keys siempre devuelven success — dejar las defaults equivale a no tener CAPTCHA real.
+
 ## Deploy en Render
 
 1. Push a GitHub
 2. Render Dashboard → New → Web Service → conectar repo
 3. Render detecta `render.yaml` automáticamente
-4. Deploy ≈ 2 min · URL: `https://[name].onrender.com`
+4. (Opcional) Configurar `TURNSTILE_SECRET_KEY` en Environment del servicio
+5. Deploy ≈ 2 min · URL: `https://[name].onrender.com`
