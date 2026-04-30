@@ -1,0 +1,24 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply font-sans antialiased text-slate-900 bg-gradient-to-br from-slate-50 via-blue-50 to-slate-100 min-h-screen;
+  }
+}
+
+@layer components {
+  .tab-button {
+    @apply flex-1 py-3 text-sm font-semibold tracking-wide uppercase transition-colors text-slate-400 border-b-2 border-transparent hover:text-slate-600;
+  }
+  .tab-button-active {
+    @apply text-brand-600 border-brand-600;
+  }
+  .input-base {
+    @apply w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-brand-500 focus:border-brand-500 outline-none transition;
+  }
+  .card {
+    @apply bg-white rounded-2xl shadow-xl border border-slate-100;
+  }
+}
