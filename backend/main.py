@@ -6,10 +6,14 @@ from typing import Optional
 # Allow running from repo root: uvicorn backend.main:app
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, Request, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
+from slowapi.util import get_remote_address
 
 from backend.qr_generator import (
     VALID_FRAME_STYLES,
@@ -17,7 +21,15 @@ from backend.qr_generator import (
     create_qr,
 )
 
+# Allow tests to bypass rate limits (TESTING=1)
+_RATE_LIMIT = "300/minute" if os.getenv("TESTING") else "30/minute"
+
+limiter = Limiter(key_func=get_remote_address, default_limits=[_RATE_LIMIT])
+
 app = FastAPI(title="QR Generator API", version="1.0.0")
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,6 +39,7 @@ app.add_middleware(
 )
 
 _HEX_RE = re.compile(r"^#[0-9A-Fa-f]{6}$")
+_MAX_LOGO_BYTES = 2 * 1024 * 1024  # 2 MB
 
 
 @app.get("/api/health")
@@ -43,16 +56,33 @@ async def options():
 
 
 @app.post("/generate")
+@limiter.limit(_RATE_LIMIT)
 async def generate_qr(
+    request: Request,
     url: str = Form(...),
     module_style: str = Form("square"),
     qr_color: str = Form("#000000"),
     bg_color: str = Form("#FFFFFF"),
     frame_style: str = Form("none"),
     logo: Optional[UploadFile] = File(None),
+    website: str = Form("", description="Honeypot — must remain empty"),
 ):
+    # ---------- ANTI-BOT CHECKS ----------
+    # 1. Honeypot — bots filling all fields will trip this
+    if website:
+        raise HTTPException(400, "Bad request")
+
+    # 2. User-Agent presence check (reject empty UA — common bot tell)
+    ua = request.headers.get("user-agent", "").strip()
+    if not ua:
+        raise HTTPException(403, "Acceso restringido")
+
+    # ---------- VALIDACIÓN DE INPUT ----------
     if not url.startswith(("http://", "https://")):
         raise HTTPException(400, "La URL debe empezar con http:// o https://")
+
+    if len(url) > 2048:
+        raise HTTPException(400, "URL demasiado larga (máx 2048 caracteres)")
 
     if module_style not in VALID_MODULE_STYLES:
         raise HTTPException(400, f"module_style inválido: {module_style!r}")
@@ -70,6 +100,8 @@ async def generate_qr(
     if logo is not None and logo.filename:
         data = await logo.read()
         if data:
+            if len(data) > _MAX_LOGO_BYTES:
+                raise HTTPException(400, "El logo supera el tamaño máximo (2 MB)")
             logo_bytes = data
 
     try:

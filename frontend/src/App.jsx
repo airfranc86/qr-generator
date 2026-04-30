@@ -131,6 +131,7 @@ export default function App() {
       form.append("qr_color", qrColor);
       form.append("bg_color", bgColor);
       form.append("frame_style", frameStyle);
+      form.append("website", ""); // honeypot — must stay empty
       if (logoFile) form.append("logo", logoFile);
 
       const res = await fetch("/generate", { method: "POST", body: form });
@@ -333,6 +334,16 @@ export default function App() {
               </div>
             </div>
 
+            {/* Honeypot anti-bot — invisible to humans, visible to naive bots */}
+            <input
+              type="text"
+              name="website"
+              tabIndex={-1}
+              autoComplete="off"
+              aria-hidden="true"
+              style={{ position: "absolute", left: "-9999px", width: 1, height: 1, opacity: 0, pointerEvents: "none" }}
+            />
+
             {error && (
               <div role="alert" className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 animate-fade-in">
                 {error}
@@ -391,7 +402,7 @@ export default function App() {
         <a
           href="https://ajconsultingitwebv2.vercel.app/"
           target="_blank"
-          rel="noopener noreferrer"
+          rel="noopener noreferrer nofollow"
           className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/70 backdrop-blur-sm border border-slate-200 hover:border-brand-300 hover:bg-white hover:text-brand-700 transition-all shadow-sm hover:shadow focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-500"
         >
           <span>Creado por</span>
